@@ -75,26 +75,25 @@ MidiMap 95, $LOOPER_MUTE, "SelectSLTrack", 0.1, 0, 1, 0 ; select all tracks
 MidiMap 71, $COLOR_SYS, "RefreshColors", 0.1, 1, 1, 0
 
 ;; samples/synths
-MidiMap 39, $PAD_L, "Bd", 1, 0, 110, 0
-MidiMap 68, $PAD_R, "Bd", 1, 0, 110, 0
+MidiMap 39, $PAD_L, "Bd", 1, 0, 110
+MidiMap 68, $PAD_R, "Bd", 1, 0, 110
 MidiMap 42, $PAD_L, "Hh", 1, 1, 5000, 0.05
 MidiMap 73, $PAD_R, "Hh", 1, 1, 5000, 0.05
 MidiMap 38, $PAD_L, "Hh", 1, 1, 5000, 0.3
 MidiMap 69, $PAD_R, "Hh", 1, 1, 5000, 0.3
 MidiMap 43, $PAD_L, "Sample", 1, -1, 60, giSnare1
 MidiMap 72, $PAD_R, "Sample", 1, -1, 60, giSnare1
-MidiMap 46, $INSTR, "ChordsWrap", 4, 0, 60, giChordAm7
-MidiMap 47, $INSTR, "ChordsWrap", 4, 0, 60, giChordDm
-MidiMap 76, $INSTR, "ChordsWrap", 4, 0, 60, giChordG
-MidiMap 77, $INSTR, "ChordsWrap", 4, 0, 60, giChordDm7
-MidiMap 50, $INSTR, "Square", 2, 0, 28, 0
-MidiMap 52, $INSTR, "Square", 2, 0, 28, 0
+MidiMap 46, $INSTR, "SoloInstr", 4, 0, 60, nstrnum("PlayChords"), giChordAm7
+MidiMap 47, $INSTR, "SoloInstr", 4, 0, 60, nstrnum("PlayChords"), giChordDm
+MidiMap 76, $INSTR, "SoloInstr", 4, 0, 60, nstrnum("PlayChords"), giChordG
+MidiMap 77, $INSTR, "SoloInstr", 4, 0, 60, nstrnum("PlayChords"), giChordDm7
+MidiMap 50, $INSTR, "SoloInstr", 2, 0, 28, nstrnum("Square")
+MidiMap 51, $INSTR, "SoloInstr", 2, 0, 30, nstrnum("Square")
+MidiMap 80, $INSTR, "SoloInstr", 2, 0, 31, nstrnum("Square")
 
 ;; light up Launchpad keys
 instr RefreshColors
-  ignore p4
-  ignore p5
-  ignore p6
+  ignore p4, p5, p6, p7
   for iColor, iIndex in getcol(giMidiMap, 0) do
     noteon 1, iIndex, iColor
   od
@@ -106,6 +105,7 @@ instr Sample
   iGain = p4
   iFreq mtof p5
   iTable = p6
+  ignore p7
   ;
   xtratim ftlen(iTable) * 261.626/iFreq / sr
   aSig,aSig2 loscil3 iGain, iFreq, iTable, 261.626, 0
@@ -117,6 +117,7 @@ instr SampleMono
   iGain = p4
   iFreq = p5
   iTable = p6
+  ignore p7
   ;
   xtratim ftlen(iTable) * 261.626/iFreq / sr
   aSig loscil3 iGain, iFreq, iTable, 261.626, 0
@@ -128,24 +129,13 @@ endin
 instr PlayChords
   iDur = p3
   iGain = p4
-  ignore p5
+  iFreq = p5
   iSample def p6, 0
+  ignore p7
   ;
   aSig subinstr "SampleMono", iGain, mtof:i(60), iSample
   kEnv madsr 0.01, 0.1, 0.9, 0.1
   out aSig*kEnv, aSig*kEnv
-endin
-
-instr ChordsWrap
-  iInstr = nstrnum("PlayChords")
-  iDur = p3
-  iGain def p4, 1/2
-  iNote def p5, 60
-  iSample def p6, 0
-  ;
-  turnoff2 iInstr, 0, 1
-  schedule iInstr, 0.001, iDur, iGain, iNote, iSample
-  turnoff
 endin
 
 ;; Synthesized Instruments
@@ -155,6 +145,7 @@ instr Bd
   iGain def p4, 1
   iFreq def p5, 330
   iDur def p6, 0.1
+  ignore p7
   ;
   kEnv linseg iGain, iDur*3, 0
   kFreq linseg iFreq, iDur, 10
@@ -170,6 +161,7 @@ instr Hh
   iGain def p4, 1
   iFreq def p5, 3000
   iDur def p6, 0.1
+  ignore p7
   ;
   kEnv linseg iGain, iDur, 0
   aSig noise kEnv, 0
@@ -180,7 +172,7 @@ endin
 
 giChoosenSLTrack = 0
 instr SelectSLTrack
-  iIgnore = p5 + p6
+  ignore p5, p6, p7
   noteon 1, giChoosenSLTrack, $LOOPER_SELECT
   giChoosenSLTrack = p4
   if giChoosenSLTrack != 0 then
@@ -188,42 +180,29 @@ instr SelectSLTrack
   endif
 endin
 
-instr Pads
-  iGain = p4
-  iFreq mtof p5
-  ;
-  kEnv madsr 0.02, 0.07, 0.7, 0.3
-  kEnv *= iGain
-  aSig vco2 kEnv, iFreq
-  aSig vclpf aSig, kEnv*iFreq*5+100, 0.35
-  ;
-  out aSig, aSig
-endin
-
-instr PadsR  ;; a wrapper stopping the previous instance
-  iInstr = nstrnum("VoxHumana")
+instr SoloInstr  ;; a wrapper stopping the previous instance
   iDur = p3
-  iGain def p4, 1/2
-  iNote def p5, 60
-  ignore p6
+  iGain = p4
+  iNote = p5
+  iInstr = p6
+  iArg = p7
   ;
-  iFreq mtof iNote
   turnoff2 iInstr, 0, 1
-  schedule iInstr, 0.0001, iDur, mtof(iNote), iGain
+  schedule iInstr, 0.01, iDur, iGain, iNote, iArg, 0
   turnoff
 endin
 
 instr Square
   iGain = p4
   iFreq mtof p5
-  ignore p6
+  ignore p6, p7
   ;
-  kEnv madsr 0.02, 0.07, 0.7, 0.3
+  kEnv madsr 0.02, 0.07, 0.7, 0.1
   kLfo lfo 1, 1/2
   kLfo scale kLfo, 0.8, 0.2, 1, -1
   aSqr vco2 1, iFreq, 2, kLfo
   ;
-  aOut = aSqr * kEnv * iGain * 0.2
+  aOut = aSqr * kEnv * iGain * 0.1
   out aOut, aOut
 endin
 
