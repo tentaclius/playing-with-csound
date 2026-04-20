@@ -23,15 +23,16 @@ endop
 #define MIDI_DUR #2#
 #define MIDI_GAIN #3#
 #define MIDI_FREQ #4#
-#define MIDI_SAMPLE #5#
-#define MIDI_PARAM #6#
-#define MIDI_LAST #7#
+#define MIDI_PARAM1 #5#
+#define MIDI_PARAM2 #6#
+#define MIDI_PARAM3 #7#
+#define MIDI_LAST #8#
 
-giMidiMap[][] init 100, 7
-opcode MidiMap, 0, iiSiiooo
-  iNote, iColor, SInstr, iDur, iGain, iFreq, iSample, iParam xin
+giMidiMap[][] init 100, $MIDI_LAST
+opcode MidiMap, 0, iiSiioooo
+  iNote, iColor, SInstr, iDur, iGain, iFreq, iParam1, iParam2, iParam3 xin
   iInstrNum = SInstr == "" ? 0 : nstrnum(SInstr)
-  giMidiMap setrow fillarray(iColor, iInstrNum, iDur, iGain, iFreq, iSample, iParam), iNote
+  giMidiMap setrow fillarray(iColor, iInstrNum, iDur, iGain, iFreq, iParam1, iParam2, iParam3), iNote
 endop
 
 massign 1, "MidiHandler"
@@ -46,6 +47,6 @@ instr MidiHandler
       iGain = sqrt(iVelo/127) * ampdb(iGain)
     endif
     iFreq def giMidiMap[iNote][$MIDI_FREQ], mtof:i(iNote)
-    schedule giMidiMap[iNote][$MIDI_INSTR], 0, giMidiMap[iNote][$MIDI_DUR], iGain, iFreq, giMidiMap[iNote][$MIDI_SAMPLE], giMidiMap[iNote][$MIDI_PARAM]
+    schedule giMidiMap[iNote][$MIDI_INSTR], 0, giMidiMap[iNote][$MIDI_DUR], iGain, iFreq, giMidiMap[iNote][$MIDI_PARAM1], giMidiMap[iNote][$MIDI_PARAM2], giMidiMap[iNote][$MIDI_PARAM3]
   endif
 endin

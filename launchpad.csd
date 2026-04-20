@@ -41,13 +41,6 @@ giChordG ftgen 0,0,0,1,"s/G.wav",0,0,0
 #define INSTR #80#
 #define COLOR_SYS #5#
 
-;; midi mapping structure
-#define MIDI_COLOR #0#
-#define MIDI_INSTR #1#
-#define MIDI_DUR #2#
-#define MIDI_GAIN #3#
-#define MIDI_FREQ #4#
-#define MIDI_SAMPLE #5#
 ; looper colors
 #define LOOPER_RECORD #5#
 #define LOOPER_SELECT #40#
@@ -83,17 +76,18 @@ MidiMap 38, $PAD_L, "Hh", 1, 1, 5000, 0.3
 MidiMap 69, $PAD_R, "Hh", 1, 1, 5000, 0.3
 MidiMap 43, $PAD_L, "Sample", 1, -1, 60, giSnare1
 MidiMap 72, $PAD_R, "Sample", 1, -1, 60, giSnare1
-MidiMap 46, $INSTR, "SoloInstr", 4, 0, 60, nstrnum("PlayChords"), giChordAm7
-MidiMap 47, $INSTR, "SoloInstr", 4, 0, 60, nstrnum("PlayChords"), giChordDm
-MidiMap 76, $INSTR, "SoloInstr", 4, 0, 60, nstrnum("PlayChords"), giChordG
-MidiMap 77, $INSTR, "SoloInstr", 4, 0, 60, nstrnum("PlayChords"), giChordDm7
-MidiMap 50, $INSTR, "SoloInstr", 2, 0, 28, nstrnum("Square")
-MidiMap 51, $INSTR, "SoloInstr", 2, 0, 30, nstrnum("Square")
-MidiMap 80, $INSTR, "SoloInstr", 2, 0, 31, nstrnum("Square")
+MidiMap 46, $INSTR, "SoloTrigger", 4, 0, 60, nstrnum("PlayChords"), giChordAm7
+MidiMap 47, $INSTR, "SoloTrigger", 4, 0, 60, nstrnum("PlayChords"), giChordDm
+MidiMap 76, $INSTR, "SoloTrigger", 4, 0, 60, nstrnum("PlayChords"), giChordG
+MidiMap 77, $INSTR, "SoloTrigger", 4, 0, 60, nstrnum("PlayChords"), giChordDm7
+MidiMap 50, $INSTR, "SoloTrigger", 2, 0, 40, nstrnum("Square")
+MidiMap 51, $INSTR, "SoloTrigger", 2, 0, 42, nstrnum("Square")
+MidiMap 80, $INSTR, "SoloTrigger", 2, 0, 43, nstrnum("Square")
+MidiMap 54, $INSTR, "SoloTrigger", 4, 0, 52, nstrnum("Airy")
 
 ;; light up Launchpad keys
 instr RefreshColors
-  ignore p4, p5, p6, p7
+  ignore = p8
   for iColor, iIndex in getcol(giMidiMap, 0) do
     noteon 1, iIndex, iColor
   od
@@ -105,7 +99,7 @@ instr Sample
   iGain = p4
   iFreq mtof p5
   iTable = p6
-  ignore p7
+  ignore = p8
   ;
   xtratim ftlen(iTable) * 261.626/iFreq / sr
   aSig,aSig2 loscil3 iGain, iFreq, iTable, 261.626, 0
@@ -117,7 +111,7 @@ instr SampleMono
   iGain = p4
   iFreq = p5
   iTable = p6
-  ignore p7
+  ignore = p8
   ;
   xtratim ftlen(iTable) * 261.626/iFreq / sr
   aSig loscil3 iGain, iFreq, iTable, 261.626, 0
@@ -125,27 +119,84 @@ instr SampleMono
   out aSig, aSig
 endin
 
+giChoosenSLTrack = 0
+instr SelectSLTrack
+  ignore = p8
+  noteon 1, giChoosenSLTrack, $LOOPER_SELECT
+  giChoosenSLTrack = p4
+  if giChoosenSLTrack != 0 then
+    noteon 1, giChoosenSLTrack, $LOOPER_SELECTED
+  endif
+endin
+
+;; voice stealing stuff
+#define SOLO_MAX_INST #32#
+
+instr SoloInstrWrapper
+  iGain = p4
+  iNote = p5
+  iInstr = p6
+  iInstance = p7
+  iSample = p8
+  ;
+  SStopChn sprintf "solo.stop.%d.%d", iInstr, iInstance
+  chnset 0, SStopChn
+  kStopFlag init 0
+  kEnv = 1
+  if kStopFlag == 0 then
+    kStopFlag chnget SStopChn
+  endif
+  if kStopFlag == 1 then
+    kEnv line 1, 0.1, 0
+    if kEnv < 0.01 then
+      turnoff
+    endif
+  endif
+  ;
+  aSig subinstr iInstr, iGain, iNote, iSample
+  aSig *= kEnv
+  out aSig, aSig
+endin
+
+instr SoloTrigger  ;; a wrapper stopping the previous instance
+  iDur = p3
+  iGain = p4
+  iNote = p5
+  iInstr = p6
+  iArg = p7
+  ignore = p8
+  ;
+  SLastInstChn sprintf "solo.inst.%d", iInstr
+  iInstance chnget SLastInstChn
+  SStopChn sprintf "solo.stop.%d.%d", iInstr, iInstance
+  chnset 1, SStopChn
+  iNextInstance = (iInstance + 1) % $SOLO_MAX_INST
+  chnset iNextInstance, SLastInstChn
+  schedule "SoloInstrWrapper", 0.001, iDur, iGain, iNote, iInstr, iNextInstance, iArg
+  turnoff
+endin
+
+;; Instruments
+;; =================================================================================
+
 ;; a wrapper stopping the previous instance
 instr PlayChords
   iDur = p3
   iGain = p4
   iFreq = p5
   iSample def p6, 0
-  ignore p7
+  ignore = p8
   ;
   aSig subinstr "SampleMono", iGain, mtof:i(60), iSample
   kEnv madsr 0.01, 0.1, 0.9, 0.1
   out aSig*kEnv, aSig*kEnv
 endin
 
-;; Synthesized Instruments
-;; =================================================================================
-
 instr Bd
   iGain def p4, 1
   iFreq def p5, 330
   iDur def p6, 0.1
-  ignore p7
+  ignore = p8
   ;
   kEnv linseg iGain, iDur*3, 0
   kFreq linseg iFreq, iDur, 10
@@ -161,7 +212,7 @@ instr Hh
   iGain def p4, 1
   iFreq def p5, 3000
   iDur def p6, 0.1
-  ignore p7
+  ignore = p8
   ;
   kEnv linseg iGain, iDur, 0
   aSig noise kEnv, 0
@@ -170,32 +221,24 @@ instr Hh
   out aSig, aSig
 endin
 
-giChoosenSLTrack = 0
-instr SelectSLTrack
-  ignore p5, p6, p7
-  noteon 1, giChoosenSLTrack, $LOOPER_SELECT
-  giChoosenSLTrack = p4
-  if giChoosenSLTrack != 0 then
-    noteon 1, giChoosenSLTrack, $LOOPER_SELECTED
-  endif
-endin
-
-instr SoloInstr  ;; a wrapper stopping the previous instance
-  iDur = p3
+instr Airy
   iGain = p4
-  iNote = p5
-  iInstr = p6
-  iArg = p7
+  iFreq mtof p5
   ;
-  turnoff2 iInstr, 0, 1
-  schedule iInstr, 0.01, iDur, iGain, iNote, iArg, 0
-  turnoff
+  kEnv xadsr 0.1, 0.1, 0.7, 2
+  aSig noise 1, 0
+  aSig vclpf aSig, iFreq, 0.99
+  aSin poscil 1/2, iFreq/2 
+  aSin += poscil(1/3, iFreq)
+  ;
+  aOut = (aSig + aSin) / 2 * iGain * kEnv
+  out aOut, aOut
 endin
 
 instr Square
   iGain = p4
   iFreq mtof p5
-  ignore p6, p7
+  ignore = p8
   ;
   kEnv madsr 0.02, 0.07, 0.7, 0.1
   kLfo lfo 1, 1/2
