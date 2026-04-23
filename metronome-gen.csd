@@ -9,21 +9,8 @@ ksmps = 4
 0dbfs = 1
 nchnls = 3
 
-;; helper opcode
-opcode def, i, ii  ;; set a value or use the default value in case of 0
-  iVal, iDflt xin
-  if iVal == 0 then
-    iVal = iDflt
-  endif
-  xout iVal
-endop
-
-opcode ignore, 0, i
-  ignore xin
-endop
-
 instr MetronomeSnd
-  iFq def p4, 1000
+  iFq = p4
   ;
   kEnv linseg 1, 0.051, 0
   aSig noise kEnv/2, 0.5
@@ -46,9 +33,11 @@ endin
 
 </CsInstruments>
 <CsScore>
+r1024
 i "MetronomeSnd" 0 0.5 1000
 i . + . 500
 i . +
 i . +
+s
 </CsScore>
 </CsoundSynthesizer>

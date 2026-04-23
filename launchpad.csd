@@ -80,10 +80,22 @@ MidiMap 46, $INSTR, "SoloTrigger", 4, 0, 60, nstrnum("PlayChords"), giChordAm7
 MidiMap 47, $INSTR, "SoloTrigger", 4, 0, 60, nstrnum("PlayChords"), giChordDm
 MidiMap 76, $INSTR, "SoloTrigger", 4, 0, 60, nstrnum("PlayChords"), giChordG
 MidiMap 77, $INSTR, "SoloTrigger", 4, 0, 60, nstrnum("PlayChords"), giChordDm7
-MidiMap 50, $INSTR, "SoloTrigger", 2, 0, 40, nstrnum("Square")
-MidiMap 51, $INSTR, "SoloTrigger", 2, 0, 42, nstrnum("Square")
-MidiMap 80, $INSTR, "SoloTrigger", 2, 0, 43, nstrnum("Square")
-MidiMap 54, $INSTR, "SoloTrigger", 4, 0, 52, nstrnum("Airy")
+MidiMap 48, $INSTR, "SoloTrigger", 2, 0, 40, nstrnum("Square")
+MidiMap 49, $INSTR, "SoloTrigger", 2, 0, 42, nstrnum("Square")
+MidiMap 50, $INSTR, "SoloTrigger", 2, 0, 43, nstrnum("Square")
+MidiMap 51, $INSTR, "SoloTrigger", 2, 0, 45, nstrnum("Square")
+MidiMap 80, $INSTR, "SoloTrigger", 2, 0, 47, nstrnum("Square")
+MidiMap 81, $INSTR, "SoloTrigger", 2, 0, 48, nstrnum("Square")
+MidiMap 82, $INSTR, "SoloTrigger", 2, 0, 50, nstrnum("Square")
+MidiMap 83, $INSTR, "SoloTrigger", 2, 0, 52, nstrnum("Square")
+MidiMap 52, $INSTR, "SoloTrigger", 4, 0, 64, nstrnum("Airy")
+MidiMap 53, $INSTR, "SoloTrigger", 4, 0, 66, nstrnum("Airy")
+MidiMap 54, $INSTR, "SoloTrigger", 4, 0, 67, nstrnum("Airy")
+MidiMap 55, $INSTR, "SoloTrigger", 4, 0, 69, nstrnum("Airy")
+MidiMap 84, $INSTR, "SoloTrigger", 4, 0, 71, nstrnum("Airy")
+MidiMap 85, $INSTR, "SoloTrigger", 4, 0, 72, nstrnum("Airy")
+MidiMap 86, $INSTR, "SoloTrigger", 4, 0, 74, nstrnum("Airy")
+MidiMap 87, $INSTR, "SoloTrigger", 4, 0, 76, nstrnum("Airy")
 
 ;; light up Launchpad keys
 instr RefreshColors
@@ -140,7 +152,6 @@ instr SoloInstrWrapper
   iSample = p8
   ;
   SStopChn sprintf "solo.stop.%d.%d", iInstr, iInstance
-  chnset 0, SStopChn
   kStopFlag init 0
   kEnv = 1
   if kStopFlag == 0 then
@@ -168,10 +179,13 @@ instr SoloTrigger  ;; a wrapper stopping the previous instance
   ;
   SLastInstChn sprintf "solo.inst.%d", iInstr
   iInstance chnget SLastInstChn
-  SStopChn sprintf "solo.stop.%d.%d", iInstr, iInstance
-  chnset 1, SStopChn
   iNextInstance = (iInstance + 1) % $SOLO_MAX_INST
   chnset iNextInstance, SLastInstChn
+  SStopChn sprintf "solo.stop.%d.%d", iInstr, iInstance
+  SNextStopChn sprintf "solo.stop.%d.%d", iInstr, iNextInstance
+  chnset 1, SStopChn
+  chnset 0, SNextStopChn
+  iVal chnget SStopChn
   schedule "SoloInstrWrapper", 0.001, iDur, iGain, iNote, iInstr, iNextInstance, iArg
   turnoff
 endin
