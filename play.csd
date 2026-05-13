@@ -1,6 +1,9 @@
 <CsoundSynthesizer>
 <CsOptions>
 -o dac
+-+skip_seconds=0
+-m 4
+;-t60
 </CsOptions>
 <CsInstruments>
 
@@ -11,91 +14,194 @@ nchnls = 2
 
 #include "lib.orc"
 
-#define LFO(tb'pos'fq) #tabw (lfo(tabi($pos, $tb)/3, $fq) + 2*tabi($pos, $tb)/3), $pos, $tb#
-
-opcode Sines, a, iiki
-  iNst, iSize, kFreq, iGainFt xin
-  aRec init 0
-  kGain tab iNst-1, iGainFt
-  aSig poscil 1, kFreq*iNst
-  aSig = aSig/iSize * kGain
-  if iNst < iSize then
-    aRec Sines iNst+1, iSize, kFreq, iGainFt
-  endif
-  xout aSig+aRec
-endop
-
-instr Sins
-  iGain = p4
-  iFreq = p5
- 
-  xtratim 1
-  kEnv adsr 0.01, 0.1, 0.5, 0.5
-
-  iGainsFt Tb 1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/10, 1/11
-  $LFO(iGainsFt' 1' iFreq/400)
-  $LFO(iGainsFt' 2' iFreq/300)
-  $LFO(iGainsFt' 3' iFreq/200)
-  $LFO(iGainsFt' 4' iFreq/100)
-
-  aSig Sines 1, 3, iFreq, iGainsFt
-  outall aSig * kEnv * iGain
-endin
-
-instr SinsN
-  iFreq mtof p4
-  iGain def p5, 1/2
-  iLen def p6, p3
-  print p6
-  schedule "Sins", 0, iLen, iGain, iFreq
-endin
-
-instr HfNoise
+;; Instruments
+instr Airy
   iGain = p4
   iFreq mtof p5
-
-  kEnv adsr 1, 1, 0.65, 2
-
-  aNoise noise 1, -0.3
-  aNoise vclpf aNoise, iFreq, 0.99
-
-  aSin poscil 1/2, iFreq/2
-
-  aSig0 vco2 1, iFreq, 0, 0, 0
-  aSig1 vco2 1/2, iFreq, 0, 0, 0.12 
-  aSig2 vco2 1/3, iFreq+1, 0, 0, 0.3
-  aSaw = (aSig0 + aSig1 + aSig2) / 3
-  kLfo lfo 1, 1/2, 1
-  kLfo scale kLfo, 10, 7, 1, -1
-  aSaw vclpf aSaw, iFreq*kLfo, 0.3
-  aSaw =0
-
-  aOut = (aSin + aNoise + aSaw/3)/3 * kEnv * iGain
+  ;
+  kEnv xadsr 1, 0.3, 0.7, 2
+  aSig noise 1/2, 0.4
+  aSig vclpf aSig, iFreq, 0.989
+  aSin1 poscil 1/8, iFreq/2 
+  aSin2 poscil 1/4, iFreq
+  aSin3 poscil 1/12, iFreq*2
+  aSin = aSin1 + aSin2 + aSin3
+  ;
+  aOut = (aSig + aSin) * iGain * kEnv
   outall aOut
 endin
 
-instr SSaw
+instr Ding
+  iFreq mtof p4
+  iGain def p5, 0.5
+  iDecay def p6, 0.7
+  iAttack = 0.01
+  ;
+  kEnv transeg 0, iAttack, 6, iGain, iDecay, -6, 0
+  if trigger(kEnv, 0, 1) == 1 then
+    turnoff
+  endif
+  aSig poscil kEnv, iFreq
+  outall aSig
+endin
+  
+instr Square
   iGain = p4
   iFreq mtof p5
+  ;
+  kEnv adsr 0.02, 0.07, 0.7, 0.3
+  kLfo lfo 1, 1/2
+  kLfo scale kLfo, 0.8, 0.2, 1, -1
+  aSqr vco2 1, iFreq, 2, kLfo
+  ;
+  aOut = aSqr * kEnv * iGain * 0.1
+  out aOut, aOut
+endin
 
-  kEnv xadsr 0.016, 0.1, 0.6, 1
+instr Bd
+  iGain def p4, 1
+  iFreq def p5, 330
+  iDur def p6, 0.06
+  ;
+  kEnv linseg iGain, iDur*3, 0
+  kFreq linseg iFreq, iDur, 10
+  aSig poscil 1, kFreq
+  aBass poscil iGain, 60
+  ;
+  aSig = (aSig + aBass) * kEnv / 2
+  out aSig, aSig
+endin
 
-  aSig0 vco2 1, iFreq, 0, 0, 0
-  aSig1 vco2 1/2, iFreq, 0, 0, 0.12 
-  aSig2 vco2 1/3, iFreq+1, 0, 0, 0.3
-  aSaw = (aSig0 + aSig1 + aSig2) / 3
-
-  kLfo lfo 1, 1/2, 1
-  kLfo scale kLfo, 10, 7, 1, -1
-  aSaw vclpf aSaw, iFreq*kLfo, 0.3
-
-  outall aSaw * kEnv * iGain
+instr Hh
+  iGain def p4, 0.5
+  iFreq def p5, 3000
+  iDur def p6, 0.07
+  ;
+  kEnv linseg iGain, iDur, 0
+  aSig noise kEnv, 0
+  aSig mvchpf aSig, iFreq, 0.9
+  ;
+  out aSig, aSig
+endin
+  
+chnset 300, "FmBass.depth"
+chnset 3, "FmBass.Q"
+chnset 0.5, "FmBass.gain"
+chnset 60, "FmBass.note"
+instr FmBass
+  kFreq mtof param_or_chn(p4, "FmBass.note")
+  kGain param_or_chn p5, "FmBass.gain"
+  kDepth param_or_chn p6, "FmBass.depth"
+  kQ param_or_chn p7, "FmBass.Q"
+  ;
+  kEnv adsr 0.1, 0.1, 0.7, 0.2
+  aMod poscil kDepth, kFreq * kQ
+  aSig poscil kGain * kEnv, kFreq + aMod
+  outall aSig
 endin
 
 </CsInstruments>
 <CsScore>
-i "SSaw" 0 2 1 60
-i "SSaw" 1 2 0.5 63
-i "SSaw" 2 2 0.5 67
+#define BAR_SIZE #4#  ;; bar is 4 beats
+#define BAR #B $BAR_SIZE#
+
+t0 [60*$BAR_SIZE]
+
+i"Ding" 0 1 60 .3
+i"Ding" 1 . 63
+i"Ding" 2 . 65
+i"Ding" 3 . 67
+
+$BAR
+i"Ding" 0 1 60 .3
+i"Ding" 1 . 65
+i"Ding" 2 . 67
+i"Ding" 3 . 72
+
+$BAR
+i"Ding" 0 1 60 .3
+i"Ding" 1 . 63
+i"Ding" 2 . 65
+i"Ding" 3 . 67
+
+$BAR
+i"Ding" 1 1 65 .3
+i"Ding" 2 . 67
+i"Ding" 3 . 72
+
+;;;; 4
+
+$BAR
+i"ChnLine" 0 7 "FmBass.depth" 50 500
+i"ChnLine" 0 2 "FmBass.gain" 0 0.5
+i"FmBass" 0.01 9 36 0.1
+
+i"Ding" 0 1 60 .3
+i"Ding" 1 . 63
+i"Ding" 2 . 65
+i"Ding" 3 . 67
+
+i"Ding" 1 1 [65+5] .3
+i"Ding" 2 . [67+5]
+i"Ding" 3 . [72+5]
+
+$BAR
+i"ChnLine" 2 4 "FmBass.Q" 3 8
+i"Ding" 0 1 60 .3
+i"Ding" 1 . 65
+i"Ding" 2 . 67
+i"Ding" 3 . 72
+
+$BAR
+i"FmBass" 0 9 41 0.2 300 2
+i"Ding" 0 1 60 .3
+i"Ding" 1 . 63
+i"Ding" 2 . 65
+i"Ding" 3 . 67
+
+i"Ding" 1 1 [65+5] .3
+i"Ding" 2 . [67+5]
+i"Ding" 3 . [72+5]
+
+$BAR
+i"Ding" 1 1 65 .3
+i"Ding" 2 . 67
+i"Ding" 3 . 72
+
+;;;; 8
+
+$BAR
+i"FmBass" 0 8 39 0.2 300 2
+i"Ding" 0 1 60 .3
+i"Ding" 1 . 63
+i"Ding" 2 . 65
+i"Ding" 3 . 67
+
+i"Ding" 1 1 [65+5] .3
+i"Ding" 2 . [67+5]
+i"Ding" 3 . [72+7]
+
+$BAR
+i"Ding" 1 1 65 .3
+i"Ding" 2 . 67
+i"Ding" 3 . 72
+
+$BAR
+i"Ding" 0 1 60 .3
+i"Ding" 1 . 63
+i"Ding" 2 . 65
+i"Ding" 3 . 67
+
+i"Ding" 1 1 [67+5] .3
+i"Ding" 2 . [65+5]
+i"Ding" 3 . [72+2]
+
+$BAR
+i"Ding" 1 1 65 .3
+i"Ding" 2 . 67
+i"Ding" 3 . 72
+
+;;;; 12
+
 </CsScore>
 </CsoundSynthesizer>
