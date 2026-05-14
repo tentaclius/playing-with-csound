@@ -2,7 +2,7 @@
 <CsOptions>
 -o dac
 -+skip_seconds=0
--m 4
+;-m 4
 ;-t60
 </CsOptions>
 <CsInstruments>
@@ -34,10 +34,10 @@ endin
 instr Ding
   iFreq mtof p4
   iGain def p5, 0.5
-  iDecay def p6, 0.7
-  iAttack = 0.01
+  iDecay def p6, 0.8
+  xtratim 1
   ;
-  kEnv transeg 0, iAttack, 6, iGain, iDecay, -6, 0
+  kEnv transeg 0, 0.02, 6, iGain, iDecay, -6, 0
   if trigger(kEnv, 0, 1) == 1 then
     turnoff
   endif
@@ -58,10 +58,13 @@ instr Square
   out aOut, aOut
 endin
 
+chnset 0.06, "Bd.dur"
+chnset 300, "Bd.freq"
+chnset 0.9, "Bd.gain"
 instr Bd
-  iGain def p4, 1
-  iFreq def p5, 330
-  iDur def p6, 0.06
+  iGain param_or_chn p4, "Bd.gain"
+  iFreq param_or_chn p5, "Bd.freq"
+  iDur param_or_chn p6, "Bd.dur"
   ;
   kEnv linseg iGain, iDur*3, 0
   kFreq linseg iFreq, iDur, 10
@@ -88,13 +91,15 @@ chnset 300, "FmBass.depth"
 chnset 3, "FmBass.Q"
 chnset 0.5, "FmBass.gain"
 chnset 60, "FmBass.note"
+chnset 0.2, "FmBass.env.attack"
 instr FmBass
   kFreq mtof param_or_chn(p4, "FmBass.note")
   kGain param_or_chn p5, "FmBass.gain"
   kDepth param_or_chn p6, "FmBass.depth"
   kQ param_or_chn p7, "FmBass.Q"
+  iAttack param_or_chn p8, "FmBass.env.attack"
   ;
-  kEnv adsr 0.1, 0.1, 0.7, 0.2
+  kEnv adsr iAttack, 0.1, 0.7, 0.5
   aMod poscil kDepth, kFreq * kQ
   aSig poscil kGain * kEnv, kFreq + aMod
   outall aSig
@@ -107,7 +112,7 @@ endin
 
 t0 [60*$BAR_SIZE]
 
-i"Ding" 0 1 60 .3
+i"Ding" 0 1 60 .3 0
 i"Ding" 1 . 63
 i"Ding" 2 . 65
 i"Ding" 3 . 67
@@ -134,7 +139,8 @@ i"Ding" 3 . 72
 $BAR
 i"ChnLine" 0 7 "FmBass.depth" 50 500
 i"ChnLine" 0 2 "FmBass.gain" 0 0.5
-i"FmBass" 0.01 9 36 0.1
+
+i"FmBass" 0.01 9 36 0.1 0 0 2
 
 i"Ding" 0 1 60 .3
 i"Ding" 1 . 63
@@ -147,13 +153,14 @@ i"Ding" 3 . [72+5]
 
 $BAR
 i"ChnLine" 2 4 "FmBass.Q" 3 8
+
 i"Ding" 0 1 60 .3
 i"Ding" 1 . 65
 i"Ding" 2 . 67
 i"Ding" 3 . 72
 
 $BAR
-i"FmBass" 0 9 41 0.2 300 2
+i"FmBass" 0 9 41 0.2 300 2 0.2
 i"Ding" 0 1 60 .3
 i"Ding" 1 . 63
 i"Ding" 2 . 65
@@ -177,31 +184,52 @@ i"Ding" 1 . 63
 i"Ding" 2 . 65
 i"Ding" 3 . 67
 
-i"Ding" 1 1 [65+5] .3
+i"Ding" 1 . [65+5] .3
 i"Ding" 2 . [67+5]
 i"Ding" 3 . [72+7]
 
 $BAR
-i"Ding" 1 1 65 .3
+i"Ding" 1 . 65 .3
 i"Ding" 2 . 67
 i"Ding" 3 . 72
 
 $BAR
-i"Ding" 0 1 60 .3
+i"Ding" 0 . 60 .3
 i"Ding" 1 . 63
 i"Ding" 2 . 65
 i"Ding" 3 . 67
 
-i"Ding" 1 1 [67+5] .3
+i"Ding" 1 . [67+5] .3
 i"Ding" 2 . [65+5]
 i"Ding" 3 . [72+2]
 
 $BAR
-i"Ding" 1 1 65 .3
+i"Ding" 1 . 65 .3
 i"Ding" 2 . 67
 i"Ding" 3 . 72
 
 ;;;; 12
 
+$BAR
+i"Bd" 0 1 .8
+i"Bd" 2 1
+
+i"Ding" 0 . 60 .2 0
+i"Ding" 1 . 63
+i"Ding" 2 . 65
+i"Ding" 3 . 67
+
+i"Ding" 1 . [67+5]
+i"Ding" 2 . [65+5]
+i"Ding" 3 . [72+2]
+
+$BAR
+i"Bd" 0 1
+i"Bd" 2 1
+
+i"Ding" 0 1 60 .2 0
+i"Ding" 1 . 63
+i"Ding" 2 . 65
+i"Ding" 3 . 67
 </CsScore>
 </CsoundSynthesizer>

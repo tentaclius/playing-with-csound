@@ -17,11 +17,19 @@ endop
 opcode param_or_chn, k, iS
   iParam, SChName xin
   kValue = iParam
-  ;; if given argument is greater than zero, then jump away; otherwise, use the value from the channel
   if kValue == 0 then
     kValue chnget SChName
   endif
   xout kValue
+endop
+
+opcode param_or_chn, i, iS
+  iParam, SChName xin
+  iValue = iParam
+  if iValue == 0 then
+    iValue chnget SChName
+  endif
+  xout iValue
 endop
   
 giTempo = 60
@@ -46,14 +54,7 @@ instr ChnSet
   iValue = p4
   chnset iValue, SName
 endin
-opcode def, i, ii  ;; set a value or use the default value in case of 0
-  iVal, iDflt xin
-  if iVal == 0 then
-    iVal = iDflt
-  endif
-  xout iVal
-endop
-
+  
 ;; MIDI abstractions
 #define MIDI_COLOR #0#
 #define MIDI_INSTR #1#
