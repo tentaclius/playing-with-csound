@@ -2,7 +2,7 @@
 <CsOptions>
   -o dac
   -+skip_seconds=0
-  ;-m4
+  -m4
   ;-t60
 </CsOptions>
 <CsInstruments>
@@ -11,29 +11,6 @@ sr = 48000
 ksmps = 4
 nchnls = 2
 0dbfs = 1
-
-instr Bass
-  pset 0, 0, 1, 60, 0.7
-  iFreq mtof p4
-  iDur, iGain = p3, p5
-  xtratim 0.5
-  ;
-  kEnv adsr 0.01, 0.1, 0.5, 0.4
-  kEnv *= iGain
-  aSig vco2 kEnv, iFreq
-  kFq scale kEnv, 700, 100
-  aSig moogladder aSig, kFq, .6
-  ;
-  chnmix aSig, "Echo"
-  ;outall aSig
-endin
-
-instr Echo
-  aSig chnget "Echo"
-  aSigL, aSigR freeverb aSig, aSig, .9, .9
-  aSig = aSig/2 + aSigL/3 + aSigR/3
-  out aSig, aSig
-endin
 
 instr Bd
   pset 0, 0, 1, .9, 300, .08
@@ -87,16 +64,31 @@ instr Rattle
   turnoff
 endin
 
-instr lop
-  iTm init 1/4
-  schedule "Bass", 0, iTm, 34
-  ;schedule "Bass", 0, iTm, 46, .3
-  schedule "lop", iTm, 1
-  turnoff
-endin
+instr aisnare1
+  iamp  = p4
 
-instr Cleanup
-  chnclear "Echo"
+  ; --- shared envelope ---
+  aenv  expon   1, 0.25, 0.001        ; exponential decay, 150ms
+
+  ; --- body: pitched sine with downward pitch sweep ---
+  apitch expon  280, 0.06, 140        ; sweep 280Hz -> 140Hz over 60ms
+  abody  oscil  aenv, apitch
+
+  ; --- noise: white noise, bandpass filtered ---
+  anoise rand   1
+  anoise butterbp anoise, 4000, 3500  ; center 4kHz, wide band
+  anoise =       anoise * aenv * 2.5  ; boost noise a bit
+
+  ; --- transient: short noise burst ---
+  atenv  expon  1, 0.008, 0.001       ; very fast 8ms decay
+  atrans rand   1
+  atrans butterhp atrans, 6000        ; high-passed click
+  atrans =       atrans * atenv
+
+  ; --- mix ---
+  aout = (abody * 0.5 + anoise * 0.5 + atrans * 0.3) * iamp
+
+  out aout, aout
 endin
   
 </CsInstruments>
@@ -105,13 +97,91 @@ endin
 #define AND #
 #
 
+;; defaults
+i"Bd" 0 0 .9 300 .08
+i"Hh" 0 0 .2 3000 .02
+i"Sn" 0 0 .8 500 .1
+i"Rattle" 0 0 "Hh" 4 .2 3000 .02
+
 ;; start
-t0 [90*4]
+t0 [110*4]
 
-i"Cleanup" 0 -1
-i"Echo" 0 -1
+i"Bd" 0 1
 
-i"lop" 0 1
+B4
+i"Sn" 0 2
+i"Bd" 3 . .3
+
+B4
+i"Bd" 1 . >
+i"Bd" 2 . .9
+
+B4
+i"Sn" 0
+
+;; 4
+
+B4
+i"Bd" 0
+
+B4
+i"Sn" 0
+i"Bd" 2 . .1
+i"Bd" 3 . .8
+
+B4
+i"Bd" 1
+i"Bd" 2
+
+B4
+i"Sn" 0
+
+;; 8
+
+B4
+i"Bd" 0  $AND  i"Hh" 0 1 .1
+i"Rattle" 1 1 "Hh" 2
+i"Hh" 2
+i"Hh" 3
+
+B4
+i"Sn" 0
+i"Hh" 1
+i"Rattle" 2 1 "Hh" 3
+i"Bd" 3  $AND  i"Hh" 3
+
+B4
+i"Bd" 1
+i"Bd" 2
+
+i"Rattle" 0 4 "Hh" 4
+
+B4
+i"Sn" 0
+i"Rattle" 0 4 "Hh" 4
+
+;; 12
+
+B4
+i"Bd" 0  $AND  i"Rattle" 0 1 "Hh" 3
+i"Rattle" 1 3 "Hh" 3
+
+B4
+i"Sn" 0
+i"Hh" 1
+i"Bd" 2  $AND  i"Rattle" 2 1 "Hh" 3
+i"Bd" 3
+
+B4
+i"Bd" 1
+i"Bd" 2
+i"Rattle" 0 4 "Hh" 4
+
+B4
+i"Sn" 0
+i"Rattle" 0 4 "Hh" 4
+
+;; 16
 
 </CsScore>
 </CsoundSynthesizer>
