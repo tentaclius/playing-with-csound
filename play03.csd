@@ -2,7 +2,7 @@
 <CsOptions>
   -o dac
   -+skip_seconds=0
-  -m4
+  ;-m4
   ;-t60
 </CsOptions>
 <CsInstruments>
@@ -27,13 +27,6 @@ instr Bass
   ;
   chnmix aSig, "Echo"
   ;outall aSig
-endin
-
-instr Echo
-  aSig chnget "Echo"
-  aSigL, aSigR freeverb aSig, aSig, .9, .9
-  aSig = aSig/2 + aSigL/3 + aSigR/3
-  out aSig, aSig
 endin
 
 instr Bd
@@ -62,7 +55,7 @@ instr Hh
 endin
 
 instr Sn
-  pset 0, 0, 1, .5, 1000, .2
+  pset 0, 0, 1, .5, 100, .2
   iGain, iFreq, iDur = p4, p5, p6
   ;
   kEnv linseg iGain, iDur, 0
@@ -91,28 +84,53 @@ endin
 instr lop
   iTm init 1/4
   schedule "Bass", 0, iTm, 34
-  ;schedule "Bass", 0, iTm, 46, .3
+  schedule "Bass", 0, iTm, 46, .3
   schedule "lop", iTm, 1
   turnoff
 endin
 
-instr Cleanup
+instr +Echo
+  aSig chnget "Echo"
   chnclear "Echo"
+  aSigL, aSigR freeverb aSig, aSig, .9, .9
+  aSig = aSig/2 + aSigL/3 + aSigR/3
+  out aSig, aSig
 endin
-  
-</CsInstruments>
-<CsScore>
 
-#define AND #
-#
+</CsInstruments>
+<CsScore bin="guile guile-score-preproc.scm">
 
 ;; start
-t0 [90*4]
+t0 %(* 80 4)
 
-i"Cleanup" 0 -1
 i"Echo" 0 -1
 
-i"lop" 0 1
+i"Bass" 0 1 %A-1 .5
+i. + . . .4
+i.
+i.
+
+i"Bd" 0 1
+
+B4
+i"Bass" 0 1 %A-1 .5
+i. + . . .4
+i.
+i"Bass" + 1 %C-2
+
+i"Sn" 0 1
+
+B4
+i"Bass" 0 1 %A-1 .5
+i. + . . .4
+i.
+i.
+
+B4
+i"Bass" 0 1 %A-1 .5
+i. + . . .4
+i.
+i"Bass" + 1 %C-2
 
 </CsScore>
 </CsoundSynthesizer>
