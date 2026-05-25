@@ -26,7 +26,14 @@ instr Bass
   aSig moogladder aSig, kFq, .6
   ;
   chnmix aSig, "Echo"
-  ;outall aSig
+endin
+
+instr BassN
+  SNote = p4
+  iGain = p5
+  iNote ntom SNote
+  aOutL, aOutR subinstr "Bass", iNote, iGain
+  out aOutL, aOutR
 endin
 
 instr Bd
@@ -55,20 +62,23 @@ instr Hh
 endin
 
 instr Sn
-  pset 0, 0, 1, .5, 100, .2
-  iGain, iFreq, iDur = p4, p5, p6
+  iAmp  = p4
   ;
-  kEnv linseg iGain, iDur, 0
-  aSig = 0
-  aSig noise 1, 0
-  aSig mvchpf aSig, iFreq, 0.1
-  aSaw poscil 1, 100
-  aSig += aSaw
-  aSig *= kEnv
+  kEnv expon 1, 0.25, 0.001
+  kPitch expon 280, 0.06, 140
+  aBody oscil kEnv, kPitch
+  aNoise rand 1
+  aNoise butterbp aNoise, 4000, 3500
+  aNoise *= kEnv * 2.5
+  kTEnv expon 1, 0.008, 0.001
+  aTrans rand 1
+  aTrans butterhp aTrans, 6000
+  aTrans *= kTEnv
   ;
-  out aSig, aSig
+  aOut = (aBody * 0.5 + aNoise * 0.5 + aTrans * 0.3) * iAmp
+  outall aOut
 endin
-
+  
 instr Rattle
   SInstrName init p4
   iInstr nstrnum SInstrName
@@ -81,14 +91,6 @@ instr Rattle
   turnoff
 endin
 
-instr lop
-  iTm init 1/4
-  schedule "Bass", 0, iTm, 34
-  schedule "Bass", 0, iTm, 46, .3
-  schedule "lop", iTm, 1
-  turnoff
-endin
-
 instr +Echo
   aSig chnget "Echo"
   chnclear "Echo"
@@ -98,39 +100,37 @@ instr +Echo
 endin
 
 </CsInstruments>
-<CsScore bin="guile guile-score-preproc.scm">
+<CsScore>
 
 ;; start
-t0 %(* 80 4)
+t0 [60*4]
 
 i"Echo" 0 -1
 
-i"Bass" 0 1 %A-1 .5
+i"BassN" 0 1 "1A" .5
 i. + . . .4
 i.
-i.
-
-i"Bd" 0 1
+i. + . "1A#"
 
 B4
-i"Bass" 0 1 %A-1 .5
+i"BassN" 0 1 "1A"
+i. + . . .3
 i. + . . .4
-i.
-i"Bass" + 1 %C-2
+i"BassN" + 1 "2C"
 
 i"Sn" 0 1
 
 B4
-i"Bass" 0 1 %A-1 .5
+i"BassN" 0 1 "1A"
 i. + . . .4
 i.
 i.
 
 B4
-i"Bass" 0 1 %A-1 .5
+i"BassN" 0 1 "1A"
 i. + . . .4
 i.
-i"Bass" + 1 %C-2
+i"BassN" + 1 "1A#"
 
 </CsScore>
 </CsoundSynthesizer>

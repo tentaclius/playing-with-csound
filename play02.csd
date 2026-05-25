@@ -2,7 +2,7 @@
 <CsOptions>
   -o dac
   -+skip_seconds=0
-  -m4
+  ;-m4
   ;-t60
 </CsOptions>
 <CsInstruments>
@@ -37,21 +37,6 @@ instr Hh
   out aSig, aSig
 endin
 
-instr Sn
-  pset 0, 0, 1, .5, 1000, .2
-  iGain, iFreq, iDur = p4, p5, p6
-  ;
-  kEnv linseg iGain, iDur, 0
-  aSig = 0
-  aSig noise 1, 0
-  aSig mvchpf aSig, iFreq, 0.1
-  aSaw poscil 1, 100
-  aSig += aSaw
-  aSig *= kEnv
-  ;
-  out aSig, aSig
-endin
-
 instr Rattle
   SInstrName init p4
   iInstr nstrnum SInstrName
@@ -64,31 +49,22 @@ instr Rattle
   turnoff
 endin
 
-instr aisnare1
-  iamp  = p4
-
-  ; --- shared envelope ---
-  aenv  expon   1, 0.25, 0.001        ; exponential decay, 150ms
-
-  ; --- body: pitched sine with downward pitch sweep ---
-  apitch expon  280, 0.06, 140        ; sweep 280Hz -> 140Hz over 60ms
-  abody  oscil  aenv, apitch
-
-  ; --- noise: white noise, bandpass filtered ---
-  anoise rand   1
-  anoise butterbp anoise, 4000, 3500  ; center 4kHz, wide band
-  anoise =       anoise * aenv * 2.5  ; boost noise a bit
-
-  ; --- transient: short noise burst ---
-  atenv  expon  1, 0.008, 0.001       ; very fast 8ms decay
-  atrans rand   1
-  atrans butterhp atrans, 6000        ; high-passed click
-  atrans =       atrans * atenv
-
-  ; --- mix ---
-  aout = (abody * 0.5 + anoise * 0.5 + atrans * 0.3) * iamp
-
-  out aout, aout
+instr Sn
+  iAmp  = p4
+  ;
+  kEnv expon 1, 0.25, 0.001
+  kPitch expon 280, 0.06, 140
+  aBody oscil kEnv, kPitch
+  aNoise rand 1
+  aNoise butterbp aNoise, 4000, 3500
+  aNoise *= kEnv * 2.5
+  kTEnv expon 1, 0.008, 0.001
+  aTrans rand 1
+  aTrans butterhp aTrans, 6000
+  aTrans *= kTEnv
+  ;
+  aOut = (aBody * 0.5 + aNoise * 0.5 + aTrans * 0.3) * iAmp
+  outall aOut
 endin
   
 </CsInstruments>
