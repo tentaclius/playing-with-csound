@@ -1,5 +1,7 @@
 <CsoundSynthesizer>
 <CsOptions>
+  --daemon
+  --realtime
   -o dac
   -+rtaudio=jack
   -+rtmidi=alsaseq
